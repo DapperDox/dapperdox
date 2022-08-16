@@ -1,9 +1,8 @@
-module dapperdox
+module github.com/dapperdox/dapperdox
 
 go 1.18
 
 require (
-	github.com/dapperdox/dapperdox v1.2.2
 	github.com/gorilla/pat v1.0.1
 	github.com/justinas/alice v1.2.0
 	github.com/justinas/nosurf v1.1.1
