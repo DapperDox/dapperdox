@@ -348,6 +348,9 @@ func CompileGFMMap() {
 
 	scanner := bufio.NewScanner(file)
 
+	// Reset to stop replacement list being duplicated for every call to this function
+	gfmReplace = gfmReplace[:0]
+	
 	for scanner.Scan() {
 		line := scanner.Text()
 
