@@ -43,6 +43,7 @@ var _bindata = map[string][]byte{}
 var _metadata = map[string]map[string]string{}
 var guideReplacer *strings.Replacer
 var gfmReplace []*gfmReplacer
+var gfmMapCompiled bool
 
 var sectionSplitRegex = regexp.MustCompile("\\[\\[[\\w\\-\\/]+\\]\\]")
 var gfmMapSplit = regexp.MustCompile(":")
@@ -299,70 +300,74 @@ func splitOnSection(text string) ([]string, []string) {
 // ---------------------------------------------------------------------------
 
 func CompileGFMMap() {
-
-	var mapfile string
-
-	cfg, _ := config.Get()
-
-	if len(cfg.AssetsDir) != 0 {
-		mapfile = filepath.Join(cfg.AssetsDir, "gfm.map")
-		logger.Tracef(nil, "Looking in assets dir for %s\n", mapfile)
-		if _, err := os.Stat(mapfile); os.IsNotExist(err) {
-			mapfile = ""
-		}
-	}
-	if len(mapfile) == 0 && len(cfg.ThemeDir) != 0 {
-		mapfile = filepath.Join(cfg.ThemeDir, cfg.Theme, "gfm.map")
-		logger.Tracef(nil, "Looking in theme dir for %s\n", mapfile)
-		if _, err := os.Stat(mapfile); os.IsNotExist(err) {
-			mapfile = ""
-		}
-	}
-	if len(mapfile) == 0 {
-		mapfile = filepath.Join(cfg.DefaultAssetsDir, "themes", cfg.Theme, "gfm.map")
-		logger.Tracef(nil, "Looking in default theme dir for %s\n", mapfile)
-		if _, err := os.Stat(mapfile); os.IsNotExist(err) {
-			mapfile = ""
-		}
-	}
-	if len(mapfile) == 0 {
-		mapfile = filepath.Join(cfg.DefaultAssetsDir, "/themes/default/gfm.map")
-		logger.Tracef(nil, "Looking in default theme for %s\n", mapfile)
-		if _, err := os.Stat(mapfile); os.IsNotExist(err) {
-			mapfile = ""
-		}
-	}
-
-	if len(mapfile) == 0 {
-		logger.Tracef(nil, "No GFM HTML mapfile found\n")
-		return
-	}
-	logger.Tracef(nil, "Processing GFM HTML mapfile: %s\n", mapfile)
-	file, err := os.Open(mapfile)
-
-	if err != nil {
-		logger.Errorf(nil, "Error: %s", err)
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	// Reset to stop replacement list being duplicated for every call to this function
-	gfmReplace = gfmReplace[:0]
+	if !gfmMapCompiled {
+		logger.Tracef(nil, "Compiling GFM map")
 	
-	for scanner.Scan() {
-		line := scanner.Text()
+		var mapfile string
 
-		rep := &gfmReplacer{}
-		if rep.Parse(line) != nil {
-			logger.Tracef(nil, "GFM replace %s with %s\n", rep.Regexp, rep.Replace)
-			gfmReplace = append(gfmReplace, rep)
+		cfg, _ := config.Get()
+
+		if len(cfg.AssetsDir) != 0 {
+			mapfile = filepath.Join(cfg.AssetsDir, "gfm.map")
+			logger.Tracef(nil, "Looking in assets dir for %s\n", mapfile)
+			if _, err := os.Stat(mapfile); os.IsNotExist(err) {
+				mapfile = ""
+			}
 		}
-	}
+		if len(mapfile) == 0 && len(cfg.ThemeDir) != 0 {
+			mapfile = filepath.Join(cfg.ThemeDir, cfg.Theme, "gfm.map")
+			logger.Tracef(nil, "Looking in theme dir for %s\n", mapfile)
+			if _, err := os.Stat(mapfile); os.IsNotExist(err) {
+				mapfile = ""
+			}
+		}
+		if len(mapfile) == 0 {
+			mapfile = filepath.Join(cfg.DefaultAssetsDir, "themes", cfg.Theme, "gfm.map")
+			logger.Tracef(nil, "Looking in default theme dir for %s\n", mapfile)
+			if _, err := os.Stat(mapfile); os.IsNotExist(err) {
+				mapfile = ""
+			}
+		}
+		if len(mapfile) == 0 {
+			mapfile = filepath.Join(cfg.DefaultAssetsDir, "/themes/default/gfm.map")
+			logger.Tracef(nil, "Looking in default theme for %s\n", mapfile)
+			if _, err := os.Stat(mapfile); os.IsNotExist(err) {
+				mapfile = ""
+			}
+		}
 
-	if err := scanner.Err(); err != nil {
-		logger.Errorf(nil, "Error: %s", err)
+		if len(mapfile) == 0 {
+			logger.Tracef(nil, "No GFM HTML mapfile found\n")
+			return
+		}
+		logger.Tracef(nil, "Processing GFM HTML mapfile: %s\n", mapfile)
+		file, err := os.Open(mapfile)
+
+		if err != nil {
+			logger.Errorf(nil, "Error: %s", err)
+			return
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		
+		for scanner.Scan() {
+			line := scanner.Text()
+
+			rep := &gfmReplacer{}
+			if rep.Parse(line) != nil {
+				logger.Tracef(nil, "GFM replace %s with %s\n", rep.Regexp, rep.Replace)
+				gfmReplace = append(gfmReplace, rep)
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			logger.Errorf(nil, "Error: %s", err)
+		}
+
+		gfmMapCompiled = true
+	} else {
+		logger.Tracef(nil, "GFM map already compiled - skipping")
 	}
 }
 
